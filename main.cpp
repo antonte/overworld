@@ -1,129 +1,130 @@
+#include "audio.hpp"
+#include "saw.hpp"
+#include "mix.hpp"
 #include "sdlpp.hpp"
+#include "seq.hpp"
 #include <iostream>
-
-const int quarter = 32;
-const int tempo = 132;
-const int sampleRate = 48000;
-const int buffSize = 4096;
-
-SDL_AudioSpec obtained;
-
-sdl::Init init(SDL_INIT_AUDIO);
-
-SDL_AudioSpec *desired()
-{
-  static SDL_AudioSpec spec;
-  SDL_memset(&spec, 0, sizeof(spec));
-  spec.freq = sampleRate;
-  spec.format = AUDIO_S16;
-  spec.channels = 1;
-  spec.samples = buffSize;
-  spec.callback = nullptr;
-  return &spec;
-}
-
-sdl::Audio audio(nullptr, false, desired(), &obtained, 0);
-
-int note = 0;
-int duration = quarter;
-
-void addSample(int16_t sample)
-{
-  static int16_t buff[buffSize];
-  static int idx = 0;
-  buff[idx] = sample;
-  ++idx;
-  if (idx >= buffSize)
-  {
-    audio.queue(buff, idx * sizeof(int16_t));
-    idx = 0;
-  }
-}
-
-void play()
-{
-  int freq = 220 * pow(2, (note + 3) / 12.0) * 0xffff / sampleRate;
-  static int16_t sum = 0;
-  for (int i = 0; i < duration * 60 * sampleRate / tempo / quarter - 480; ++i)
-    addSample(sum += freq);
-  for (int i = 0; i < 480; ++i)
-    addSample(0);
-}
-
-void key(int n)
-{
-  note = n;
-  duration = 32;
-}
-
-void n(int n = 0, int num = 1, int den = 1)
-{
-  note += n;
-  duration = duration * num / den;
-  play();
-}
-
-void pause()
-{
-  for (int i = 0; i < duration * 60 * sampleRate / 132 / 32; ++i)
-    addSample(0);
-}
-
-void p(int num = 1, int den = 1)
-{
-  duration = duration * num / den;
-  pause();
-}
 
 int main(int, char **)
 {
-  audio.pause(false);
-  auto l1 = []() { n(-4, 3, 4), n(-5, 1, 3); };
+  sdl::Init init(SDL_INIT_AUDIO);
+  Audio audio;
+  Mix mix(&audio, 3);
+  Saw sawN(mix.getInput(0));
+  Seq n(&sawN);
+  Saw sawM(mix.getInput(1));
+  Seq m(&sawM);
+  Saw sawB(mix.getInput(2));
+  Seq b(&sawB);
+  sawN.setTempo(132);
+  sawM.setTempo(132);
+  sawB.setTempo(132);
   // bar 1
-  key(5);
-  n(9), l1(), n(-1, 2), n(1, 1, 2), n(2, 5);
+  n.key(5);
+  n+9; n-4>>3|4; n-5>>1|3; n-1>>2; n+1>>1|2; n+2>>5;
 
+  m.key(5);
+  m&4;
+
+  b.key(5 - 24);
+  b&4;
   for (int i = 0; i < 2; ++i)
   {
     // bar 2
-    key(5);
-    auto l3 = []() {
-      auto l2 = []() { n(0, 1, 2), n(); };
-      l2(), n(0, 2), l2();
-    };
-    n(4, 1, 2), l3(), n(1, 2), l3(), n(-1, 2), l3(), n(1, 2), n(0, 3);
+    n.key(5);
+    n+4>>1|2; n>>1|2; *n; n>>2; n>>1|2; *n; n+1>>2; n>>1|2; *n; n>>2; n>>1|2; *n;
+    n-1>>2;   n>>1|2; *n; n>>2; n>>1|2; *n; n+1>>2; n>>3;
+
+    m.key(5);
+    m>>1|2; m>>1|2; *m; m>>2; m>>1|2; *m; m+2>>2; m>>1|2; *m; m-1>>2; m>>1|2; *m;
+    m-1>>2; m>>1|2; *m; m>>2; m>>1|2; *m; m+2>>2; m-1>>3;
+
+    b.key(5 - 24);
+    *b;  b-3; b+5; b-7;
+    b+5; b-3; b+5>>1|2; b-7>>3;
 
     // bar 4
-    key(5);
-    auto l4 = [&l1]() { l1(), n(2), n(3, 2), n(0, 3, 2), p(1, 3); };
-    auto l5 = []() { n(-2, 2), n(5); };
-    auto l6 = [&l5]() { l5(), n(), n(7), n(-3, 3, 2), n(-2, 5, 3); };
-    auto l7 = [&l5]() { l5(), n(5, 1, 2), n(-1), n(-2), n(-2), n(0, 8); };
-    n(4), l4(), n(-3), l6();
-    key(5);
-    n(4), l4(), n(-3), l7();
+    n.key(5);
+    n+4;      n-4>>3|4; n-5>>1|3; n+2; n+3>>2; n>>3|2; n&1|3; n-3;
+    n-2>>2;   n+5; *n; n+7; n-3>>3|2; n-2>>5|3;
+    n+2>>4|5; n-4>>3|4; n-5>>1|3; n+2; n+3>>2; n>>3|2; n&1|3; n-3;
+    n-2>>2;   n+5; n+5>>1|2; n-1; n-2; n-2; n>>8;
+
+    m.key(5);
+    m&4; ~m; ~m; ~m;
+
+    b.key(5 - 24);
+    *b;       b+4; b+1; b+1;
+    b-2;      b-1; b-1>>1|2; b-5; b+2; b+1;
+    b>>2;     b+4; b+1; b+1;
+    b+1>>1|2; b-10; b+2; b+3; b-2; b-3; b+3>>2;
 
     // bar 8
-    key(5);
-    n(4), l4(), n(-3), l6(), n(2, 4, 5), l4(), n(-3), l7();
+    n.key(5);
+    n+4;      n-4>>3|4; n-5>>1|3; n+2; n+3>>2; n>>3|2; n&1|3; n-3;
+    n-2>>2;   n+5; *n; n+7; n-3>>3|2; n-2>>5|3;
+    n+2>>4|5; n-4>>3|4; n-5>>1|3; n+2; n+3>>2; n>>3|2; n&1|3; n-3;
+    n-2>>2;   n+5; n+5>>1|2; n-1; n-2; n-2; n>>8;
+
+    m.key(5);
+    m&4; ~m; ~m; ~m;
+
+    b.key(5 - 24);
+    *b;       b+4; b+1; b+1;
+    b-2;      b-1; b-1>>1|2; b-5; b+2; b+1;
+    b>>2;     b+4; b+1; b+1;
+    b+1>>1|2; b-10; b+2; b+3; b-2; b-3; b+3; b-5;
 
     // bar 12
-    key(5);
-    auto l8 = []() { n(-4), n(-5, 2, 3), n(9, 3, 2), n(-4, 5, 3); };
-    auto l9 = []() { n(-3), n(-5, 2); };
-    n(4, 3, 4), l8(), n(3, 1, 5), l9(), n(8, 3, 2), n(-1, 9, 3), n(2, 3, 9), l8(), n(3, 1, 5), l9(),
-      n(12, 6);
+    n.key(5);
+    n+4>>3|4; n-4; n-5>>2|3; n+9>>3|2; n-4>>5|3;
+    n+3>>1|5; n-3; n-5>>2; n+8>>3|2; n-1>>9|3;
+    n+2>>3|9; n-4; n-5>>2|3; n+9>>3|2; n-4>>5|3;
+    n+3>>1|5; n-3; n-5>>2; n+12>>6;
+
+    m.key(5);
+    m&4; ~m; ~m; ~m;
+
+    b.key(5 - 24);
+    b+5>>1|2; b+1; b+1; b+2; b-2; b-3; b-4; b+4;
+    b+1;      b+1; b+1; b+2; b+3; b-1; b-4; b-2;
+    *b;       b-1; b+1; b+2; b+2; b+3; b-3; b-4;
+    b+2;      b+2; b+3; b-5; b-2; b-1; b+1; b-5;
 
     // bar 16
-    key(5);
-    n(4), l4(), n(2), n(2), n(-4), n(-5, 2), n(2, 3, 2), n(3, 8, 3), n(-3, 1, 8), n(10, 2), n(2),
-      n(-2), n(2), n(-2, 2), n(-2, 1, 4), n(-1), n(-2, 2), n(-2, 4), p();
+    n.key(5);
+    n+4;     n-4>>3|4; n-5>>1|3; n+2; n+3>>2; n>>3|2; n&1|3; n+2;
+    n+2;     n-4; n-5>>2; n+2>>3|2; n+3>>8|3; n-3>>1|8;
+    n+10>>2; n+2; n-2; n+2; n-2>>2; n-2>>1|4; n-1; n-2>>2;
+    n-2>>4; ~n;
+
+    m.key(5);
+    m&4; ~m; ~m; ~m;
+
+    b.key(5 - 24);
+    *b; *b; b-2; *b;
+    b-1; *b; b-1; *b;
+    b+4; b&3;
+    b+12>>1|3; b-5; b+5; *b;
 
     // bar 20
-    key(5);
-    auto l10 = []() { n(-3, 2), n(3, 3, 2), n(2, 2, 3); };
-    n(0, 1, 4), l10(), n(2, 1, 2), n(-1), n(-1), n(-1, 4), p(1, 4), n(-1), l10(), n(2, 4),
-      n(-4, 1, 8), l10(), n(2, 1, 2), n(1), n(2), n(2, 4), p(1, 4), n(-9), l10(), n(-2, 4);
+    n.key(5);
+    n>>1|4;   n-3>>2; n+3>>3|2; n+2>>2|3; n+2>>1|2; n-1; n-1; n-1>>4; n&1|4;
+    n-1;      n-3>>2; n+3>>3|2; n+2>>2|3; n+2>>4;
+    n-4>>1|8; n-3>>2; n+3>>3|2; n+2>>2|3; n+2>>1|2; n+1; n+2; n+2>>4; n&1|4;
+    n-9;      n-3>>2; n+3>>3|2; n+2>>2|3; n-2>>4;
+
+    m.key(5);
+    m-3>>1|4; m-4>>2; m+4>>3|2; m+2>>2|3; m+1>>1|2; m-1; *m; m-2>>4; m&1|4;
+    *m;       m-4>>2; m+4>>3|2; m+2>>2|3; m+1>>4;
+    m-3>>1|8; m-4>>2; m+4>>3|2; m+2>>2|3; m+1>>1|2; m+2; m+2; m+1>>4; m&1|4;
+    m-8;      m-4>>2; m+4>>3|2; m+2>>2|3; m-4>>4;
+
+    b.key(5 - 24);
+    b>>1|2; b-3; b+3; b+4; b+1; b+2; b-2; b-3;
+    b-2;    b-3; b+3; b+4; b+8; b-3; b-2; b-3;
+    b-4;    b-3; b+3; b+4; b+3; b-2; b-1; b-2;
+    b-2;    b-3; b+3; b+2; b-2; b-3; b+3>>2;
   }
 
   std::cin.get();
