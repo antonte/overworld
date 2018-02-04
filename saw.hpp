@@ -3,6 +3,7 @@
 #include "synth.hpp"
 #include "const.hpp"
 
+// Saw synth
 class Saw : public Synth
 {
 public:

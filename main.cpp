@@ -1,6 +1,9 @@
 #include "audio.hpp"
-#include "saw.hpp"
+#include "echo.hpp"
+#include "amp.hpp"
+#include "lpf.hpp"
 #include "mix.hpp"
+#include "saw.hpp"
 #include "sdlpp.hpp"
 #include "seq.hpp"
 #include <iostream>
@@ -9,7 +12,10 @@ int main(int, char **)
 {
   sdl::Init init(SDL_INIT_AUDIO);
   Audio audio;
-  Mix mix(&audio, 3);
+  Amp amp(&audio, 1.3);
+  Echo echo(&amp, 60 * sampleRate / 132 / 2, 0.2);
+  Lpf lpf(&echo, 0.9);
+  Mix mix(&lpf, 3);
   Saw sawN(mix.getInput(0));
   Seq n(&sawN);
   Saw sawM(mix.getInput(1));
@@ -126,6 +132,13 @@ int main(int, char **)
     b-4;    b-3; b+3; b+4; b+3; b-2; b-1; b-2;
     b-2;    b-3; b+3; b+2; b-2; b-3; b+3>>2;
   }
+
+  n.key(5);
+  n&4;
+  m.key(5);
+  m&4;
+  b.key(5 - 24);
+  b&4;
 
   std::cin.get();
   return 0;

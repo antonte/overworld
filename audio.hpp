@@ -2,6 +2,8 @@
 #include "sdlpp.hpp"
 #include "sink.hpp"
 
+// Audio sink
+// Plays audio on default audio card
 class Audio : public Sink
 {
 public:

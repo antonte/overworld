@@ -2,6 +2,7 @@
 #include "synth.hpp"
 #include "const.hpp"
 
+// Sequencer
 class Seq
 {
 public:
@@ -56,7 +57,7 @@ public:
 private:
   int note = 0;
   int duration = quarter;
-  void nn(int n = 0, int num = 1, int den = 1);
-  void pp(int num = 1, int den = 1);
+  void setNote(int n = 0, int num = 1, int den = 1);
+  void pause(int num = 1, int den = 1);
   Synth *synth;
 };

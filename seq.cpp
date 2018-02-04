@@ -7,13 +7,13 @@ Seq::N2::N2(Seq *seq, int note, int num) : seq(seq), note(note), num(num)
 void Seq::N2::operator|(int den)
 {
   played = true;
-  seq->nn(note, num, den);
+  seq->setNote(note, num, den);
 }
 
 Seq::N2::~N2()
 {
   if (!played)
-    seq->nn(note, num);
+    seq->setNote(note, num);
 }
 
 Seq::N1::N1(Seq *seq, int note) : seq(seq), note(note)
@@ -29,7 +29,7 @@ Seq::N2 Seq::N1::operator>>(int num)
 Seq::N1::~N1()
 {
   if (!played)
-    seq->nn(note);
+    seq->setNote(note);
 }
 
 Seq::P1::P1(Seq *seq, int num) : seq(seq), num(num)
@@ -39,13 +39,13 @@ Seq::P1::P1(Seq *seq, int num) : seq(seq), num(num)
 void Seq::P1::operator|(int den)
 {
   played = true;
-  seq->pp(num, den);
+  seq->pause(num, den);
 }
 
 Seq::P1::~P1()
 {
   if (!played)
-    seq->pp(num);
+    seq->pause(num);
 }
 
 Seq::Seq(Synth *synth) : synth(synth)
@@ -77,12 +77,12 @@ Seq::P1 Seq::operator&(int num)
 
 void Seq::operator*()
 {
-  nn();
+  setNote();
 }
 
 void Seq::operator~()
 {
-  pp();
+  pause();
 }
 
 void Seq::key(int n)
@@ -91,14 +91,14 @@ void Seq::key(int n)
   duration = 32;
 }
 
-void Seq::nn(int n, int num, int den)
+void Seq::setNote(int n, int num, int den)
 {
   note += n;
   duration = duration * num / den;
   synth->play(note, duration);
 }
 
-void Seq::pp(int num, int den)
+void Seq::pause(int num, int den)
 {
   duration = duration * num / den;
   synth->pause(duration);
